@@ -24,10 +24,11 @@ import com.android.volley.toolbox.Volley;
 import com.example.aibasedattendencesystem.R;
 import com.example.aibasedattendencesystem.Server.Config;
 import com.example.aibasedattendencesystem.Utility.Attendence;
-import com.example.aibasedattendencesystem.Utility.AttendenceOld;
+import com.example.aibasedattendencesystem.Utility.AttendenceHistory;
 import com.example.aibasedattendencesystem.Utility.Constant;
 import com.example.aibasedattendencesystem.Utility.Logout;
 import com.example.aibasedattendencesystem.Utility.SMS;
+import com.example.aibasedattendencesystem.Utility.WelcomeSetter;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -45,7 +46,7 @@ public class StudentArea extends AppCompatActivity {
     RelativeLayout mainLL;
     SharedPreferences sharedPreferences;
     List<Attendence> attendenceListMain;
-    List<AttendenceOld> oldAttendence;
+    List<AttendenceHistory> oldAttendence;
     TextView logout;
     String studentName;
     Handler handler;
@@ -56,15 +57,35 @@ public class StudentArea extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_student_area);
-        initialiseUIAndVariables();
-        setClickListeners();
+        initializeUIAndVariables();
+        initializeClickActions();
     }
 
-    private void setClickListeners() {
-        logout.setOnClickListener(view -> Logout.logout(this));
+    //Function for perform task while app running in background
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        if (isFirstTimeOldAttendence || isFirstTimeAttendence)
+            startHandlerForBackground();
     }
 
-    private void initialiseUIAndVariables() {
+    //Function for perform task when app is just opened
+    @Override
+    protected void onResume() {
+        super.onResume();
+        handler.removeCallbacks(thread);
+    }
+
+    //Function for perform task on app close
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        handler.removeCallbacks(thread);
+    }
+
+    //Function for initialize UI and Variables
+    private void initializeUIAndVariables() {
         sharedPreferences = getSharedPreferences(Constant.myPrefs, MODE_PRIVATE);
         studentName = sharedPreferences.getString(Constant.username, "null");
         mainLL = findViewById(R.id.idLLMain);
@@ -72,18 +93,74 @@ public class StudentArea extends AppCompatActivity {
         handler = new Handler();
         isFirstTimeAttendence = true;
         isFirstTimeOldAttendence = true;
+
+        String userName = sharedPreferences.getString(Constant.username, "Null");
+        WelcomeSetter.setWelcomeMsg(findViewById(R.id.idTVWelcome), userName);
     }
 
-    private static class sendSMS extends AsyncTask<Void, Void, Void> {
-
-        @Override
-        protected Void doInBackground(Void... voids) {
-            SMS.setUpServer("8193800247", "Dear Parent,\nYour ward has missed 5 classes of Course: \"Spring Boot\". Please have a look on that");
-            return null;
-        }
+    //Function for initialize click actions
+    private void initializeClickActions() {
+        logout.setOnClickListener(view -> Logout.logout(this));
     }
 
-    private void checkForAttendence() {
+    //Function for fetch Attendence Data for Notification
+    private void fetchAttendenceData() {
+        String token = sharedPreferences.getString(Constant.Authorization, "null");
+        String urlToHit = Config.attendenceUrl;
+        attendenceListMain = new ArrayList<>();
+
+        JsonArrayRequest jsonObjectRequest;
+        jsonObjectRequest = new JsonArrayRequest(Request.Method.GET, urlToHit, null,
+                response -> {
+                    Log.i(Constant.successTag, "Response for api call: " + urlToHit + " is: " + response);
+                    if (response != null) {
+
+                        try {
+                            for (int i = 0; i < response.length(); i++) {
+                                JSONObject jsonObject = response.getJSONObject(i);
+                                String date = jsonObject.getString(Constant.date);
+                                List<String> studentsList = new ArrayList<>();
+
+                                JSONArray jsonArray = (JSONArray) jsonObject.get(Constant.attendanceList);
+                                for (int j = 0; j < jsonArray.length(); j++) {
+                                    String name = (String) jsonArray.get(j);
+                                    studentsList.add(name);
+                                }
+
+                                Attendence attendence = new Attendence(date, studentsList);
+                                attendenceListMain.add(attendence);
+                            }
+
+                            notifyAttendenceStatus();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        Log.e(Constant.failureTag, "\n Response was null for url: " + urlToHit);
+                    }
+                },
+                volleyError -> Log.e(Constant.failureTag, "\n No info received from the server for api call: "
+                        + urlToHit + " " + volleyError.getMessage())) {
+            @Override
+            public Map<String, String> getHeaders() {
+                Map<String, String> params = new HashMap<>();
+                params.put(Constant.Authorization, token);
+                params.put("Content-Type", "application/json");
+                return params;
+            }
+
+            @Override
+            public String getBodyContentType() {
+                return super.getBodyContentType();
+            }
+        };
+
+        RequestQueue requestQueue = Volley.newRequestQueue(this);
+        requestQueue.add(jsonObjectRequest);
+    }
+
+    //Function for send Notification
+    private void notifyAttendenceStatus() {
         @SuppressLint("SimpleDateFormat") SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
         String date = simpleDateFormat.format(new Date());
 
@@ -125,73 +202,8 @@ public class StudentArea extends AppCompatActivity {
         }
     }
 
-    private void startTimer() {
-        thread = new Thread() {
-            public void run() {
-                fetchAttendenceData();
-                fetchOldAttendenceRecords();
-                handler.postDelayed(this, 3000);
-            }
-        };
-        thread.start();
-    }
-
-    private void fetchAttendenceData() {
-        String token = sharedPreferences.getString(Constant.Authorization, "null");
-        String urlToHit = Config.attendenceUrl;
-        attendenceListMain = new ArrayList<>();
-
-        JsonArrayRequest jsonObjectRequest;
-        jsonObjectRequest = new JsonArrayRequest(Request.Method.GET, urlToHit, null,
-                response -> {
-                    Log.i(Constant.successTag, "Response for api call: " + urlToHit + " is: " + response);
-                    if (response != null) {
-
-                        try {
-                            for (int i = 0; i < response.length(); i++) {
-                                JSONObject jsonObject = response.getJSONObject(i);
-                                String date = jsonObject.getString(Constant.date);
-                                List<String> studentsList = new ArrayList<>();
-
-                                JSONArray jsonArray = (JSONArray) jsonObject.get(Constant.attendanceList);
-                                for (int j = 0; j < jsonArray.length(); j++) {
-                                    String name = (String) jsonArray.get(j);
-                                    studentsList.add(name);
-                                }
-
-                                Attendence attendence = new Attendence(date, studentsList);
-                                attendenceListMain.add(attendence);
-                            }
-
-                            checkForAttendence();
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    } else {
-                        Log.e(Constant.failureTag, "\n Response was null for url: " + urlToHit);
-                    }
-                },
-                volleyError -> Log.e(Constant.failureTag, "\n No info received from the server for api call: "
-                        + urlToHit + " " + volleyError.getMessage())) {
-            @Override
-            public Map<String, String> getHeaders() {
-                Map<String, String> params = new HashMap<>();
-                params.put(Constant.Authorization, token);
-                params.put("Content-Type", "application/json");
-                return params;
-            }
-
-            @Override
-            public String getBodyContentType() {
-                return super.getBodyContentType();
-            }
-        };
-
-        RequestQueue requestQueue = Volley.newRequestQueue(this);
-        requestQueue.add(jsonObjectRequest);
-    }
-
-    private void fetchOldAttendenceRecords() {
+    //Function for fetching Attendence History
+    private void fetchAttendenceHistory() {
         String token = sharedPreferences.getString(Constant.Authorization, "null");
         String userName = sharedPreferences.getString(Constant.username, "null");
         String urlToHit = Config.attendenceHistoryUrl + userName + Config.limit;
@@ -209,11 +221,11 @@ public class StudentArea extends AppCompatActivity {
                                 JSONObject jsonObject = response.getJSONObject(i);
                                 String date = jsonObject.getString(Constant.date);
                                 boolean present = jsonObject.getBoolean(Constant.present);
-                                AttendenceOld attendence = new AttendenceOld(date, present);
+                                AttendenceHistory attendence = new AttendenceHistory(date, present);
                                 oldAttendence.add(attendence);
                             }
 
-                            checkForAbsent();
+                            checkForRegularAbsents();
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -241,11 +253,12 @@ public class StudentArea extends AppCompatActivity {
         requestQueue.add(jsonObjectRequest);
     }
 
-    private void checkForAbsent() {
+    //Function for check regular absents to send sms to parents
+    private void checkForRegularAbsents() {
         if (oldAttendence != null) {
             int count = 0;
-            for (AttendenceOld attendenceOld : oldAttendence)
-                if (!attendenceOld.isPresent()) count++;
+            for (AttendenceHistory attendenceHistory : oldAttendence)
+                if (!attendenceHistory.isPresent()) count++;
 
             if (count == 5 && isFirstTimeOldAttendence) {
                 new sendSMS().execute();
@@ -254,23 +267,25 @@ public class StudentArea extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
+    //Async Class for perform sms send functionality in background
+    private static class sendSMS extends AsyncTask<Void, Void, Void> {
 
-        if (isFirstTimeOldAttendence || isFirstTimeAttendence)
-            startTimer();
+        @Override
+        protected Void doInBackground(Void... voids) {
+            SMS.setUpServer("8193800247", "Dear Parent,\nYour ward has missed 5 classes of Course: \"Spring Boot\". Please have a look on that");
+            return null;
+        }
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        handler.removeCallbacks(thread);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        handler.removeCallbacks(thread);
+    //Function for start handler for hit API after 3 seconds
+    private void startHandlerForBackground() {
+        thread = new Thread() {
+            public void run() {
+                fetchAttendenceData();
+                fetchAttendenceHistory();
+                handler.postDelayed(this, 3000);
+            }
+        };
+        thread.start();
     }
 }

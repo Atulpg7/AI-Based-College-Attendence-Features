@@ -24,6 +24,7 @@ import com.example.aibasedattendencesystem.R;
 import com.example.aibasedattendencesystem.Server.Config;
 import com.example.aibasedattendencesystem.Utility.Constant;
 import com.example.aibasedattendencesystem.Utility.Logout;
+import com.example.aibasedattendencesystem.Utility.WelcomeSetter;
 import com.google.android.material.snackbar.Snackbar;
 
 import org.json.JSONException;
@@ -47,6 +48,12 @@ public class AdminArea extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_area);
 
+        initializeUIAndVariables();
+        initializeClickActions();
+    }
+
+    //Function for initialize UI and Variables
+    private void initializeUIAndVariables() {
         tvLogout = findViewById(R.id.TVLogout);
         tvSubmit = findViewById(R.id.idBtnSubmit);
         etSUserName = findViewById(R.id.idETSUsername);
@@ -57,12 +64,13 @@ public class AdminArea extends AppCompatActivity {
         sharedPreferences = getSharedPreferences(Constant.myPrefs, MODE_PRIVATE);
         dialog = new ProgressDialog(this);
         activity = this;
+        String userName = sharedPreferences.getString(Constant.username, "Null");
+        WelcomeSetter.setWelcomeMsg(findViewById(R.id.idTVWelcome), userName);
+    }
 
-
-        tvLogout.setOnClickListener(view -> {
-            Logout.logout(activity);
-        });
-
+    //Function for initialize click actions
+    private void initializeClickActions() {
+        tvLogout.setOnClickListener(view -> Logout.logout(activity));
 
         tvSubmit.setOnClickListener(view -> {
 
@@ -109,10 +117,12 @@ public class AdminArea extends AppCompatActivity {
         });
     }
 
+    //Function for checking string is null or not
     private boolean checkNull(String str) {
         return str.equals("");
     }
 
+    //Function for saving students data on server
     private void sendStudentData(String username, String name, String password, String parentMob) {
         String token = sharedPreferences.getString(Constant.Authorization, "null");
         String urlToHit = Config.addStudentUrl;
@@ -133,6 +143,9 @@ public class AdminArea extends AppCompatActivity {
                     if (response != null) {
                         try {
 
+                            Snackbar snackbar = Snackbar
+                                    .make(adminLL, "Student Added Successfully", Snackbar.LENGTH_LONG);
+                            snackbar.show();
 
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -147,7 +160,7 @@ public class AdminArea extends AppCompatActivity {
                 },
                 volleyError -> {
 
-                    String message = "";
+                    String message;
                     if (volleyError.networkResponse != null) {
                         try {
 
@@ -155,6 +168,7 @@ public class AdminArea extends AppCompatActivity {
                             Log.e(Constant.failureTag, ""
                                     + urlToHit + " " + object);
                             message = object.getString("message");
+                            Log.e("Message=>", message);
 
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -162,7 +176,7 @@ public class AdminArea extends AppCompatActivity {
                     }
 
                     dialog.dismiss();
-                    Snackbar snackbar = Snackbar.make(adminLL, "" + message, Snackbar.LENGTH_LONG);
+                    Snackbar snackbar = Snackbar.make(adminLL, "Student Added Successfully", Snackbar.LENGTH_LONG);
                     snackbar.show();
                 }) {
             @Override

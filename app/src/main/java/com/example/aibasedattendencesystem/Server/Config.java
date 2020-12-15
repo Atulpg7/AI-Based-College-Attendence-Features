@@ -9,5 +9,4 @@ public class Config {
     public static String attendenceUrl = hostUrl + "/api/courses/1/lectures/";
     public static String limit = "?limit=5";
     public static String attendenceHistoryUrl = hostUrl + "/api/courses/1/attendance/";
-
 }

@@ -16,15 +16,7 @@ public class Attendence {
         return date;
     }
 
-    public void setDate(String date) {
-        this.date = date;
-    }
-
     public List<String> getPresentStudents() {
         return presentStudents;
-    }
-
-    public void setPresentStudents(List<String> presentStudents) {
-        this.presentStudents = presentStudents;
     }
 }

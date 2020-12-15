@@ -9,4 +9,8 @@
     <string name="logout">Logout</string>
     <string name="login">Login</string>
     <string name="description">description</string>
+    <string name="ai_is_everything">AI is everything</string>
+    <string name="welcome_to_ai_based_attendence_app">Welcome to AI based Attendance App</string>
+    <string name="student_name">Student Name</string>
+    <string name="_1">1</string>
 </resources>

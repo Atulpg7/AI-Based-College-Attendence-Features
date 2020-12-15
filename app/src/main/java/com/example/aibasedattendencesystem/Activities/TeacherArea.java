@@ -28,6 +28,7 @@ import com.example.aibasedattendencesystem.Server.Config;
 import com.example.aibasedattendencesystem.Utility.Constant;
 import com.example.aibasedattendencesystem.Utility.Logout;
 import com.example.aibasedattendencesystem.Utility.Student;
+import com.example.aibasedattendencesystem.Utility.WelcomeSetter;
 import com.google.android.material.snackbar.Snackbar;
 
 import org.json.JSONArray;
@@ -57,6 +58,21 @@ public class TeacherArea extends AppCompatActivity implements AttendenceAdapter.
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_teacher_area);
 
+        initializeUIAndVariables();
+        initializeClickActions();
+        dialog.setMessage("Getting Students....");
+        dialog.show();
+        fetchStudents();
+    }
+
+    //Function for changing student status of Attendence
+    @Override
+    public void stateChange(int pos, boolean b) {
+        studentsList.get(pos).setPresent(b);
+    }
+
+    //Function for initialize UI and Variables
+    private void initializeUIAndVariables() {
         mainLL = findViewById(R.id.idLLMain);
         rvStudents = findViewById(R.id.idRVStudents);
         dialog = new ProgressDialog(this);
@@ -65,11 +81,12 @@ public class TeacherArea extends AppCompatActivity implements AttendenceAdapter.
         studentsList = new ArrayList<>();
         logoutTV = findViewById(R.id.TVLogout);
         activity = this;
+        String userName = sharedPreferences.getString(Constant.username,"Null");
+        WelcomeSetter.setWelcomeMsg(findViewById(R.id.idTVWelcome),userName);
+    }
 
-        dialog.setMessage("Getting Students....");
-        dialog.show();
-        fetchStudents();
-
+    //Function for initialize click actions
+    private void initializeClickActions() {
         btn.setOnClickListener(view -> {
             getAttendingStudents();
             dialog.setMessage("Saving Attendence....");
@@ -80,17 +97,14 @@ public class TeacherArea extends AppCompatActivity implements AttendenceAdapter.
         logoutTV.setOnClickListener(view -> Logout.logout(activity));
     }
 
-    @Override
-    public void stateChange(int pos, boolean b) {
-        studentsList.get(pos).setPresent(b);
-    }
-
+    //Function for checking how many students are present for attendence upload
     private void getAttendingStudents() {
         attendingStudents = new ArrayList<>();
         for (Student student : studentsList)
             if (student.isPresent()) attendingStudents.add(student.getName());
     }
 
+    //Function for setting RecyclerView ( UI of Students List)
     private void setRV() {
         attendenceAdapter = new AttendenceAdapter(studentsList);
         rvStudents.setHasFixedSize(true);
@@ -100,6 +114,7 @@ public class TeacherArea extends AppCompatActivity implements AttendenceAdapter.
         attendenceAdapter.notifyDataSetChanged();
     }
 
+    //Function for getting students list from server
     private void fetchStudents() {
         String token = sharedPreferences.getString(Constant.Authorization, "null");
         String urlToHit = Config.allStudentsInCourse;
@@ -157,6 +172,7 @@ public class TeacherArea extends AppCompatActivity implements AttendenceAdapter.
         requestQueue.add(jsonObjectRequest);
     }
 
+    //Function for saving Attendence
     private void sendDetailsToServer() {
         String token = sharedPreferences.getString(Constant.Authorization, "null");
         String urlToHit = Config.attendenceUrl;

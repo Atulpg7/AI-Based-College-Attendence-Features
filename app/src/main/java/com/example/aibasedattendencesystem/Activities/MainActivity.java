@@ -41,17 +41,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        etUsername = findViewById(R.id.idETUsername);
-        etPassword = findViewById(R.id.idETPassword);
-        btnLogin = findViewById(R.id.idBtnSubmit);
-        mainPageLL = findViewById(R.id.idLLMainPage);
-        dialog = new ProgressDialog(this);
-        sharedPreferences = getSharedPreferences(Constant.myPrefs, MODE_PRIVATE);
+        initializeUIAndVariables();
+        initializeClickActions();
+        isAlreadyLoggedIn();
+    }
 
-        if (checkAlreadyLoggedIn()) {
-
+    //Function for check if User is Already LoggedIn
+    private void isAlreadyLoggedIn() {
+        boolean alreadyLoggedIn = sharedPreferences.getBoolean(Constant.isLoggedIn, false);
+        if (alreadyLoggedIn) {
             String role = sharedPreferences.getString(Constant.role, "ADMIN");
-
             if (role.equals("ADMIN")) {
                 startActivity(new Intent(this, AdminArea.class));
                 finish();
@@ -63,6 +62,20 @@ public class MainActivity extends AppCompatActivity {
                 finish();
             }
         }
+    }
+
+    //Function for initialize UI and Variables
+    private void initializeUIAndVariables() {
+        etUsername = findViewById(R.id.idETUsername);
+        etPassword = findViewById(R.id.idETPassword);
+        btnLogin = findViewById(R.id.idBtnSubmit);
+        mainPageLL = findViewById(R.id.idLLMainPage);
+        dialog = new ProgressDialog(this);
+        sharedPreferences = getSharedPreferences(Constant.myPrefs, MODE_PRIVATE);
+    }
+
+    //Function for initialize click actions
+    private void initializeClickActions() {
 
         btnLogin.setOnClickListener(view -> {
 
@@ -84,19 +97,15 @@ public class MainActivity extends AppCompatActivity {
             }
 
         });
-
-
     }
 
-    private boolean checkAlreadyLoggedIn() {
-        return sharedPreferences.getBoolean(Constant.isLoggedIn, false);
-    }
-
+    //Function for checking string is null or not
     public boolean checkNull(String s) {
         return s.equals("");
     }
 
-    private void saveToken(String s, String token, String username) {
+    //Function for saving data in memory
+    private void saveDataInSharedPreferences(String s, String token, String username) {
         editor = sharedPreferences.edit();
         String str = "Bearer " + s;
         editor.putString(Constant.Authorization, str);
@@ -106,6 +115,7 @@ public class MainActivity extends AppCompatActivity {
         editor.apply();
     }
 
+    //Function for validating user's credentials
     private void authenticateCredentials(String uName, String uPass) {
 
         String urlToHit = Config.authUrl;
@@ -124,7 +134,7 @@ public class MainActivity extends AppCompatActivity {
                     if (response != null) {
                         try {
 
-                            String role = "", token = "",username="";
+                            String role = "", token = "", username = "";
 
                             if (response.has(Constant.role)) {
                                 role = response.getString(Constant.role);
@@ -140,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
 
                             if (!checkNull(role) && !checkNull(token)) {
 
-                                saveToken(token, role,username);
+                                saveDataInSharedPreferences(token, role, username);
 
                                 if (role.equals("ADMIN")) {
                                     startActivity(new Intent(this, AdminArea.class));

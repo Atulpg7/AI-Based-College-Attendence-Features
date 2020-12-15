@@ -16,4 +16,7 @@ public class Constant {
     public static String myPrefs = "MyPrefs";
     public static String date = "date";
     public static String attendanceList = "attendanceList";
+    public static String present = "present";
+    public static String CHANNEL_NAME = "ANDROID_NOTIFICATION";
+    public static String CHANNEL_ID = "AI Attendence";
 }

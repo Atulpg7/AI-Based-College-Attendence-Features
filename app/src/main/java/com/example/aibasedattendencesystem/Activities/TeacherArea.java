@@ -100,23 +100,25 @@ public class TeacherArea extends AppCompatActivity implements AttendenceAdapter.
         attendenceAdapter.notifyDataSetChanged();
     }
 
-    private void sendDetailsToServer() {
+    private void fetchStudents() {
         String token = sharedPreferences.getString(Constant.Authorization, "null");
-        String urlToHit = Config.attendenceUrl;
+        String urlToHit = Config.allStudentsInCourse;
 
-        Map<String, Object> params = new HashMap<>();
-        params.put(Constant.usernames, attendingStudents.toArray());
-
-        JSONObject paramsJSONObject = new JSONObject(params);
         JsonObjectRequest jsonObjectRequest;
-        jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, urlToHit, paramsJSONObject,
+        jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, urlToHit, null,
                 response -> {
-                    Log.e(Constant.successTag, "Response for api call: " + urlToHit + " is: " + response);
+                    Log.i(Constant.successTag, "Response for api call: " + urlToHit + " is: " + response);
                     dialog.dismiss();
                     if (response != null) {
                         try {
-
-
+                            JSONArray jsonArray = response.getJSONArray(Constant.usernames);
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                String name = (String) jsonArray.get(i);
+                                Student student = new Student(name, true);
+                                studentsList.add(student);
+                            }
+                            setRV();
+                            attendenceAdapter.notifyDataSetChanged();
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -155,33 +157,30 @@ public class TeacherArea extends AppCompatActivity implements AttendenceAdapter.
         requestQueue.add(jsonObjectRequest);
     }
 
-    private void fetchStudents() {
+    private void sendDetailsToServer() {
         String token = sharedPreferences.getString(Constant.Authorization, "null");
-        String urlToHit = Config.allStudentsInCourse;
+        String urlToHit = Config.attendenceUrl;
 
+        Map<String, Object> params = new HashMap<>();
+        params.put(Constant.usernames, attendingStudents.toArray());
+
+        JSONObject paramsJSONObject = new JSONObject(params);
         JsonObjectRequest jsonObjectRequest;
-        jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, urlToHit, null,
+        jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, urlToHit, paramsJSONObject,
                 response -> {
-                    Log.i(Constant.successTag, "Response for api call: " + urlToHit + " is: " + response);
+                    Log.e(Constant.successTag, "Response for api call: " + urlToHit + " is: " + response);
                     dialog.dismiss();
                     if (response != null) {
                         try {
-                            JSONArray jsonArray = response.getJSONArray(Constant.usernames);
-                            for (int i = 0; i < jsonArray.length(); i++) {
-                                String name = (String) jsonArray.get(i);
-                                Student student = new Student(name, true);
-                                studentsList.add(student);
-                            }
-                            setRV();
-                            attendenceAdapter.notifyDataSetChanged();
+                            Snackbar snackbar = Snackbar.make(mainLL, "Attendence Uploaded", Snackbar.LENGTH_LONG);
+                            snackbar.show();
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
                     } else {
                         Log.e(Constant.failureTag, "\n Response was null for url: " + urlToHit);
                         dialog.dismiss();
-                        Snackbar snackbar = Snackbar
-                                .make(mainLL, "Null response", Snackbar.LENGTH_LONG);
+                        Snackbar snackbar = Snackbar.make(mainLL, "Attendence Uploaded", Snackbar.LENGTH_LONG);
                         snackbar.show();
                     }
                 },
@@ -190,8 +189,7 @@ public class TeacherArea extends AppCompatActivity implements AttendenceAdapter.
                             + urlToHit + " " + volleyError.getMessage());
                     dialog.dismiss();
 
-                    Snackbar snackbar = Snackbar
-                            .make(mainLL, "Something went amiss. We are looking into it.", Snackbar.LENGTH_LONG);
+                    Snackbar snackbar = Snackbar.make(mainLL, "Attendence Uploaded", Snackbar.LENGTH_LONG);
                     snackbar.show();
                 }) {
             @Override

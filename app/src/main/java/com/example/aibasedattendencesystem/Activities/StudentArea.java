@@ -16,6 +16,7 @@ import android.os.Handler;
 import android.util.Log;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -112,7 +113,7 @@ public class StudentArea extends AppCompatActivity {
         JsonArrayRequest jsonObjectRequest;
         jsonObjectRequest = new JsonArrayRequest(Request.Method.GET, urlToHit, null,
                 response -> {
-                    Log.i(Constant.successTag, "Response for api call: " + urlToHit + " is: " + response);
+                    Log.e(Constant.successTag, "Response for api call: " + urlToHit + " is: " + response);
                     if (response != null) {
 
                         try {
@@ -212,7 +213,7 @@ public class StudentArea extends AppCompatActivity {
         JsonArrayRequest jsonObjectRequest;
         jsonObjectRequest = new JsonArrayRequest(Request.Method.GET, urlToHit, null,
                 response -> {
-                    Log.i(Constant.successTag, "Response for api call: " + urlToHit + " is: " + response);
+                    Log.e(Constant.successTag, "Response for api call: " + urlToHit + " is: " + response);
                     if (response != null) {
 
                         try {
@@ -264,6 +265,8 @@ public class StudentArea extends AppCompatActivity {
                 new sendSMS().execute();
                 isFirstTimeOldAttendence = false;
             }
+
+            Toast.makeText(this, ""+count, Toast.LENGTH_SHORT).show();
         }
     }
 
